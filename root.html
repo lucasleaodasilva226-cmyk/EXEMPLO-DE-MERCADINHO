@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Mercadinho do Bairro</title>
+    <style>
+      /* ===== ESTILO / VISUAL DO SITE ===== */
+      /* CORES: --brand = cor principal (já vem do CFG.cor), --brand2 = laranja do botão do carrinho,
+   --bg = fundo da página, --card = fundo dos cartões, --tx = cor do texto, --mut = texto cinza, --bd = bordas */
+      :root {
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        --bg: #f6f7f4;
+        --card: #fff;
+        --tx: #1d2420;
+        --mut: #66706a;
+        --brand: #1f8a4c;
+        --brand2: #f08a24;
+        --bd: #e2e6e1;
+      }
+      /* Cores do modo escuro (aplicado automático se o celular estiver no modo escuro) */
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #141816;
+          --card: #1e2421;
+          --tx: #eef2ef;
+          --mut: #9aa6a0;
+          --bd: #2c3530;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #141816;
+        --card: #1e2421;
+        --tx: #eef2ef;
+        --mut: #9aa6a0;
+        --bd: #2c3530;
+      }
+      html {
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--tx);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      /* CABEÇALHO: topo fixo com nome, busca e carrinho */
+      header {
+        background: var(--brand);
+        color: #fff;
+        padding: 12px 16px;
+        position: sticky;
+        top: env(safe-area-inset-top, 0px);
+        z-index: 5;
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: 1000px;
+        margin: auto;
+      }
+      .logo {
+        font-weight: 800;
+        font-size: 18px;
+        white-space: nowrap;
+      }
+      .search {
+        flex: 1;
+        border: 0;
+        border-radius: 999px;
+        padding: 11px 16px;
+        font-size: 15px;
+        min-width: 0;
+      }
+      .cartbtn {
+        background: var(--brand2);
+        color: #fff;
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      main {
+        max-width: 1000px;
+        margin: auto;
+        padding: 14px 16px 90px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+      }
+      .chip {
+        border: 1px solid var(--bd);
+        background: var(--card);
+        color: var(--tx);
+        border-radius: 999px;
+        padding: 8px 14px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 14px;
+      }
+      .chip.on {
+        background: var(--brand);
+        color: #fff;
+        border-color: var(--brand);
+      }
+      /* FAIXA DE INFORMAÇÕES (entrega, horário, retirada) */
+      .info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        margin: 12px 0;
+        font-size: 13px;
+        color: var(--mut);
+      }
+      .info div {
+        background: var(--card);
+        border: 1px solid var(--bd);
+        border-radius: 12px;
+        padding: 10px;
+      }
+      .info b {
+        display: block;
+        color: var(--brand);
+        font-size: 14px;
+      }
+      /* GRADE DE PRODUTOS: minmax(150px) = largura mínima de cada cartão no computador */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+      }
+      .p {
+        background: var(--card);
+        border: 1px solid var(--bd);
+        border-radius: 14px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .em {
+        font-size: 42px;
+        text-align: center;
+      }
+      .p h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .pr {
+        font-weight: 800;
+        color: var(--brand);
+        font-size: 17px;
+      }
+      .qty {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: auto;
+      }
+      .qty button {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid var(--brand);
+        background: var(--card);
+        color: var(--brand);
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .add {
+        width: 100%;
+        background: var(--brand);
+        color: #fff;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      /* CARRINHO (painel que abre pela direita) */
+      #drawer {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        z-index: 10;
+      }
+      #drawer.open {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .panel {
+        background: var(--card);
+        width: min(420px, 100%);
+        height: 100%;
+        padding: 16px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--bd);
+        padding: 8px 0;
+        font-size: 14px;
+      }
+      .panel input,
+      .panel select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--bd);
+        border-radius: 10px;
+        background: var(--bg);
+        color: var(--tx);
+        font-size: 15px;
+      }
+      .send {
+        background: #25a244;
+        color: #fff;
+        border: 0;
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 800;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .close {
+        align-self: flex-end;
+        background: none;
+        border: 0;
+        font-size: 26px;
+        color: var(--tx);
+        cursor: pointer;
+      }
+      .p {
+        cursor: pointer;
+      }
+      .row button {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--brand);
+        background: var(--card);
+        color: var(--brand);
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .row span button + span,
+      .row span b {
+        margin: 0 6px;
+      }
+      /* JANELA DE QUANTIDADE (abre ao clicar no produto) */
+      #modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 12;
+        padding: 16px;
+      }
+      #modal.open {
+        display: flex;
+      }
+      .box {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 20px;
+        width: min(360px, 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+      }
+      .mq {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        margin: 6px 0;
+      }
+      .mq button {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: 1px solid var(--brand);
+        background: var(--card);
+        color: var(--brand);
+        font-size: 26px;
+        cursor: pointer;
+      }
+      .mq input {
+        width: 80px;
+        text-align: center;
+        font-size: 22px;
+        padding: 8px;
+        border: 1px solid var(--bd);
+        border-radius: 10px;
+        background: var(--bg);
+        color: var(--tx);
+      }
+      .wa {
+        position: fixed;
+        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        background: #25a244;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 800;
+        border-radius: 999px;
+        padding: 14px 18px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        z-index: 6;
+      }
+      /* Esconde a barra de rolagem das categorias (no celular desliza com o dedo) */
+      html,
+      body {
+        overflow-x: hidden;
+      }
+      .chips {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x;
+        cursor: grab;
+        user-select: none;
+      }
+      .chips::-webkit-scrollbar {
+        display: none;
+      }
+      .chip {
+        flex: 0 0 auto;
+      }
+      .panel {
+        scrollbar-width: thin;
+      }
+      /* AJUSTES PARA CELULAR (telas até 600px): topo em 2 linhas, produtos em 2 colunas.
+   Para 3 colunas no celular, troque repeat(2,1fr) por repeat(3,1fr) */
+      @media (max-width: 600px) {
+        header {
+          padding: 10px 12px;
+        }
+        .top {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .logo {
+          flex: 1;
+          font-size: 17px;
+        }
+        .search {
+          order: 3;
+          flex: 1 0 100%;
+          padding: 10px 14px;
+        }
+        main {
+          padding: 12px 12px 90px;
+        }
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+        }
+        .p {
+          padding: 10px;
+        }
+        .em {
+          font-size: 36px;
+        }
+        .info {
+          grid-template-columns: 1fr 1fr;
+        }
+        .info div:last-child {
+          grid-column: 1/-1;
+        }
+        .panel {
+          width: 100%;
+          padding: 14px;
+        }
+        .wa {
+          padding: 12px 14px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TOPO: nome da loja (preenchido pelo CFG), campo de busca e botão do carrinho -->
+    <header>
+      <div class="top">
+        <div class="logo" id="nome"></div>
+        <input class="search" id="q" placeholder="O que você procura?" />
+        <button class="cartbtn" id="open">🛒 <span id="cnt">0</span></button>
+      </div>
+    </header>
+    <!-- CONTEÚDO: faixa de informações, categorias e produtos (tudo gerado pelo JavaScript abaixo) -->
+    <main>
+      <div class="info" id="info"></div>
+      <div class="chips" id="chips"></div>
+      <div class="grid" id="grid" style="margin-top: 12px"></div>
+    </main>
+    <!-- BOTÃO FLUTUANTE DO WHATSAPP (o link é montado no JavaScript com o número do CFG) -->
+    <a class="wa" id="wa" target="_blank" rel="noopener">💬 WhatsApp</a>
+    <!-- JANELA DE QUANTIDADE: − e + ou digite o número. Mostra o valor do item e o total do pedido -->
+    <div id="modal">
+      <div class="box">
+        <div class="em" id="mem"></div>
+        <h3 id="mn" style="margin: 0"></h3>
+        <div class="pr" id="mp"></div>
+        <div class="mq">
+          <button id="mm">−</button
+          ><input
+            id="mqty"
+            type="number"
+            min="0"
+            step="1"
+            inputmode="numeric"
+          /><button id="mpl">+</button>
+        </div>
+        <div class="row"><span>Este item</span><b id="mit"></b></div>
+        <div class="row"><span>Total do pedido</span><b id="mtot"></b></div>
+        <button class="send" id="mok"></button
+        ><button class="chip" id="mcancel">Cancelar</button>
+      </div>
+    </div>
+    <!-- CARRINHO: lista de itens, totais e dados do cliente. O botão verde envia o pedido ao WhatsApp.
+     Formas de pagamento: edite as <option> do campo "pag" abaixo -->
+    <div id="drawer">
+      <div class="panel">
+        <button class="close" id="close">×</button>
+        <h2 style="margin: 0">Seu pedido</h2>
+        <div id="items"></div>
+        <div class="row"><span>Subtotal</span><b id="sub"></b></div>
+        <div class="row"><span>Entrega</span><b id="fee"></b></div>
+        <div class="row"><span>Total</span><b id="tot"></b></div>
+        <input id="cli" placeholder="Seu nome" />
+        <select id="tipo">
+          <option value="entrega">Entrega</option>
+          <option value="retirada">Retirar na loja</option>
+        </select>
+        <input id="end" placeholder="Endereço (rua, número, bairro)" />
+        <select id="pag">
+          <option>Pix</option>
+          <option>Dinheiro</option>
+          <option>Pagar na entrega</option>
+        </select>
+        <button class="send" id="send">Enviar pedido no WhatsApp</button>
+      </div>
+    </div>
+    <script>
+      /* ==========================================================
+   >>> PARTE 1: CONFIGURAÇÃO DO CLIENTE (o que você mais vai mexer) <<<
+   Para cada mercadinho novo, troque só o que está aqui.
+   ========================================================== */
+      const CFG = {
+        nome: "MERCADINHO DO AMIGÃO", // Nome da loja (aparece no topo, na aba e na mensagem do WhatsApp)
+        whats: "5581999999999", // WhatsApp: 55 + DDD + número, tudo junto, sem espaço, traço ou parênteses
+        cor: "#1f8a4c", // Cor principal do site (botões, topo, preços). Ex: azul "#1e5bd8", vermelho "#d62828"
+        taxa: 5, // Taxa de entrega em reais (use 0 para entrega grátis)
+        horario: "Seg a Sáb, 7h às 21h", // Texto do horário de funcionamento
+        bairro: "Entregamos no bairro e arredores", // Texto da área de entrega
+      };
+
+      /* ----------------------------------------------------------
+   LISTA DE PRODUTOS
+   Para ADICIONAR: copie uma linha {…}, cole abaixo e troque os dados.
+   Para REMOVER: apague a linha inteira.
+   Campos:
+     n = nome do produto
+     p = preço (use PONTO, não vírgula. Ex: 8.5 e não 8,50)
+     c = categoria (as categorias do topo são criadas sozinhas a partir daqui)
+     e = emoji que aparece no lugar da foto
+   Atenção: cada linha termina com vírgula, menos a última.
+   ---------------------------------------------------------- */
+      const PRODUTOS = [
+        { n: "Arroz 5kg", p: 28.9, c: "Mercearia", e: "🍚" },
+        { n: "Feijão carioca 1kg", p: 8.5, c: "Mercearia", e: "🫘" },
+        { n: "Óleo de soja 900ml", p: 7.9, c: "Mercearia", e: "🛢️" },
+        { n: "Macarrão 500g", p: 4.5, c: "Mercearia", e: "🍝" },
+        { n: "Leite 1L", p: 5.2, c: "Laticínios", e: "🥛" },
+        { n: "Queijo mussarela kg", p: 42, c: "Laticínios", e: "🧀" },
+        { n: "Pão francês kg", p: 16, c: "Padaria", e: "🥖" },
+        { n: "Café 500g", p: 19.9, c: "Mercearia", e: "☕" },
+        { n: "Refrigerante 2L", p: 9.5, c: "Bebidas", e: "🥤" },
+        { n: "Cerveja lata", p: 4.2, c: "Bebidas", e: "🍺" },
+        { n: "Detergente", p: 2.8, c: "Limpeza", e: "🧴" },
+        { n: "Sabão em pó 1kg", p: 12.9, c: "Limpeza", e: "🧼" },
+        { n: "Banana kg", p: 6.9, c: "Hortifruti", e: "🍌" },
+        { n: "Tomate kg", p: 7.5, c: "Hortifruti", e: "🍅" },
+        { n: "Ração para cachorro 10kg", p: 120, c: "Pet Shop", e: "🐶" },
+        { n: "Areia sanitária para gato 5kg", p: 35, c: "Pet Shop", e: "🐱" },
+      ];
+      /* ======================= FIM DA CONFIGURAÇÃO ======================= */
+
+      /* ==========================================================
+   PARTE 2: FUNCIONAMENTO DO SITE (só mexa se souber o que faz)
+   ========================================================== */
+      // Atalhos: $(id) pega um elemento da página; R(valor) formata em reais (ex: R$ 8,50)
+      const $ = (id) => document.getElementById(id),
+        R = (v) => "R$ " + v.toFixed(2).replace(".", ",");
+      document.documentElement.style.setProperty("--brand", CFG.cor);
+      $("nome").textContent = CFG.nome;
+      document.title = CFG.nome;
+      $("info").innerHTML =
+        `<div><b>🚚 Entrega</b>${CFG.bairro}</div><div><b>🕒 Horário</b>${CFG.horario}</div><div><b>🏪 Retirada</b>Sem taxa na loja</div>`;
+      // Estado: categoria selecionada e carrinho (guarda número do produto -> quantidade)
+      let cat = "Todos",
+        cart = {};
+      const cats = ["Todos", ...new Set(PRODUTOS.map((p) => p.c))];
+      // Desenha os botões de categoria
+      function chips() {
+        $("chips").innerHTML = cats
+          .map(
+            (c) =>
+              `<button class="chip ${c == cat ? "on" : ""}" data-c="${c}">${c}</button>`,
+          )
+          .join("");
+      }
+      // Desenha os produtos (filtra pela busca e pela categoria)
+      function grid() {
+        const q = $("q").value.toLowerCase();
+        $("grid").innerHTML =
+          PRODUTOS.map((p, i) => ({ ...p, i }))
+            .filter(
+              (p) =>
+                (cat == "Todos" || p.c == cat) && p.n.toLowerCase().includes(q),
+            )
+            .map((p) => {
+              const k = cart[p.i] || 0;
+              return `<div class="p" data-o="${p.i}"><div class="em">${p.e}</div><h3>${p.n}</h3><div class="pr">${R(p.p)}</div><button class="add">${k ? "No carrinho: " + k + " ✓" : "Adicionar"}</button></div>`;
+            })
+            .join("") || "<p>Nenhum produto encontrado.</p>";
+      }
+      // Calcula subtotal, entrega e total (entrega só cobra se escolher "Entrega")
+      function tot() {
+        const s = Object.entries(cart).reduce(
+          (a, [i, k]) => a + PRODUTOS[i].p * k,
+          0,
+        );
+        const f = $("tipo").value == "entrega" && s > 0 ? CFG.taxa : 0;
+        return [s, f, s + f];
+      }
+      // Atualiza tudo na tela: produtos, contador do carrinho, itens e totais
+      function upd() {
+        grid();
+        $("cnt").textContent = Object.values(cart).reduce((a, b) => a + b, 0);
+        $("items").innerHTML =
+          Object.entries(cart)
+            .map(
+              ([i, k]) =>
+                `<div class="row"><span>${PRODUTOS[i].n}</span><span><button data-m="${i}">−</button><b>${k}</b><button data-a="${i}">+</button> ${R(PRODUTOS[i].p * k)}</span></div>`,
+            )
+            .join("") || "<p>Carrinho vazio.</p>";
+        const [s, f, t] = tot();
+        $("sub").textContent = R(s);
+        $("fee").textContent = R(f);
+        $("tot").textContent = R(t);
+        $("end").style.display =
+          $("tipo").value == "entrega" ? "block" : "none";
+      }
+      // JANELA DE QUANTIDADE: mi = produto aberto, mq = quantidade escolhida
+      let mi = 0,
+        mq = 1;
+      function mupd() {
+        const p = PRODUTOS[mi],
+          [s] = tot();
+        mq = Math.max(0, Math.floor(+$("mqty").value || 0));
+        $("mit").textContent = R(p.p * mq);
+        $("mtot").textContent = R(s - (cart[mi] || 0) * p.p + mq * p.p);
+        $("mok").textContent =
+          mq == 0
+            ? cart[mi]
+              ? "Remover do pedido"
+              : "Fechar"
+            : "Adicionar ao pedido";
+      }
+      function openM(i) {
+        mi = i;
+        const p = PRODUTOS[i];
+        $("mem").textContent = p.e;
+        $("mn").textContent = p.n;
+        $("mp").textContent = R(p.p);
+        $("mqty").value = cart[i] || 1;
+        mupd();
+        $("modal").classList.add("open");
+      }
+      $("mm").onclick = () => {
+        $("mqty").value = Math.max(0, mq - 1);
+        mupd();
+      };
+      $("mpl").onclick = () => {
+        $("mqty").value = mq + 1;
+        mupd();
+      };
+      $("mqty").oninput = mupd;
+      $("mcancel").onclick = () => $("modal").classList.remove("open");
+      $("mok").onclick = () => {
+        if (mq > 0) cart[mi] = mq;
+        else delete cart[mi];
+        $("modal").classList.remove("open");
+        upd();
+      };
+      $("wa").href =
+        "https://wa.me/" +
+        CFG.whats +
+        "?text=" +
+        encodeURIComponent("Olá! Vim pelo site do " + CFG.nome);
+      document.addEventListener("click", (e) => {
+        const d = e.target.dataset;
+        const o = e.target.closest("[data-o]");
+        if (o) openM(+o.dataset.o);
+        if (d.c) {
+          cat = d.c;
+          chips();
+          grid();
+        }
+        if (d.a !== undefined) {
+          cart[d.a] = (cart[d.a] || 0) + 1;
+          upd();
+        }
+        if (d.m !== undefined) {
+          cart[d.m]--;
+          if (!cart[d.m]) delete cart[d.m];
+          upd();
+        }
+      });
+      $("q").oninput = grid;
+      $("tipo").onchange = upd;
+      $("open").onclick = () => $("drawer").classList.add("open");
+      $("close").onclick = () => $("drawer").classList.remove("open");
+      // ENVIAR PEDIDO: monta o texto e abre o WhatsApp da loja.
+      // Para mudar o formato da mensagem, edite o texto dentro de const m=`...`
+      $("send").onclick = () => {
+        const [s, f, t] = tot();
+        if (!s) return alert("Adicione produtos ao carrinho.");
+        const ent = $("tipo").value == "entrega";
+        if (!$("cli").value || (ent && !$("end").value))
+          return alert("Preencha nome e endereço.");
+        const m =
+          `*Novo pedido - ${CFG.nome}*\n\n` +
+          Object.entries(cart)
+            .map(([i, k]) => `${k}x ${PRODUTOS[i].n} - ${R(PRODUTOS[i].p * k)}`)
+            .join("\n") +
+          `\n\nSubtotal: ${R(s)}\n${ent ? "Entrega: " + R(f) + "\n" : ""}*Total: ${R(t)}*\n\nCliente: ${$("cli").value}\n${ent ? "Endereço: " + $("end").value : "Retirada na loja"}\nPagamento: ${$("pag").value}`;
+        window.open(
+          "https://wa.me/" + CFG.whats + "?text=" + encodeURIComponent(m),
+          "_blank",
+        );
+      };
+      (function () {
+        const c = $("chips");
+        let d = false,
+          x = 0,
+          l = 0;
+        c.addEventListener("mousedown", (e) => {
+          d = true;
+          x = e.pageX;
+          l = c.scrollLeft;
+        });
+        window.addEventListener("mouseup", () => (d = false));
+        c.addEventListener("mousemove", (e) => {
+          if (d) {
+            c.scrollLeft = l - (e.pageX - x);
+          }
+        });
+      })();
+      chips();
+      upd();
+    </script>
+  </body>
+</html>
